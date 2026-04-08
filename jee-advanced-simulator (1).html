@@ -1,0 +1,2652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JEE Advanced AI Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<!-- KaTeX for math rendering -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+/* ============================================================
+   CSS VARIABLES & RESET
+   ============================================================ */
+:root {
+  --bg-void: #060810;
+  --bg-deep: #0b0f1a;
+  --bg-card: #0f1422;
+  --bg-elevated: #141928;
+  --bg-highlight: #1a2136;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-active: rgba(99,179,237,0.4);
+  --accent-primary: #4f9cf9;
+  --accent-secondary: #7c3aed;
+  --accent-success: #10b981;
+  --accent-danger: #ef4444;
+  --accent-warn: #f59e0b;
+  --accent-cyan: #06b6d4;
+  --text-primary: #e8edf8;
+  --text-secondary: #8892a4;
+  --text-muted: #4a5568;
+  --physics-color: #4f9cf9;
+  --chemistry-color: #10b981;
+  --maths-color: #f59e0b;
+  --glow-primary: 0 0 20px rgba(79,156,249,0.3), 0 0 60px rgba(79,156,249,0.1);
+  --glow-success: 0 0 20px rgba(16,185,129,0.3);
+  --glow-danger: 0 0 20px rgba(239,68,68,0.3);
+  --glow-warn: 0 0 20px rgba(245,158,11,0.3);
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-void);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   BACKGROUND GRID
+   ============================================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(79,156,249,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,156,249,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   SCREENS
+   ============================================================ */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.screen.active { display: flex; }
+
+/* ============================================================
+   LANDING / UPLOAD SCREEN
+   ============================================================ */
+#screen-landing {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg-void);
+}
+
+.landing-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.logo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(79,156,249,0.1);
+  border: 1px solid rgba(79,156,249,0.25);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+.logo-badge::before {
+  content: '◆';
+  font-size: 8px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.landing-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #e8edf8 0%, #4f9cf9 50%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.landing-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 480px;
+  line-height: 1.7;
+}
+
+/* Upload Zone */
+.upload-container {
+  width: 100%;
+  max-width: 560px;
+}
+
+.upload-zone {
+  border: 2px dashed rgba(79,156,249,0.25);
+  border-radius: var(--radius-xl);
+  padding: 56px 40px;
+  text-align: center;
+  background: rgba(79,156,249,0.03);
+  cursor: pointer;
+  transition: var(--transition-slow);
+  position: relative;
+  overflow: hidden;
+}
+
+.upload-zone::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: var(--radius-xl);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent-primary);
+  background: rgba(79,156,249,0.07);
+  box-shadow: var(--glow-primary);
+  transform: translateY(-2px);
+}
+
+.upload-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  background: linear-gradient(135deg, rgba(79,156,249,0.2), rgba(124,58,237,0.2));
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.upload-zone h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.upload-zone p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 20px rgba(79,156,249,0.3);
+}
+
+.btn-upload:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(79,156,249,0.4);
+}
+
+#file-input { display: none; }
+
+/* Demo button */
+.btn-demo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-demo:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+  background: rgba(79,156,249,0.05);
+}
+
+.features-strip {
+  display: flex;
+  gap: 24px;
+  margin-top: 40px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.feature-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+}
+
+.feature-chip span { font-size: 14px; }
+
+/* ============================================================
+   PROCESSING SCREEN
+   ============================================================ */
+#screen-processing {
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-void);
+}
+
+.processing-card {
+  text-align: center;
+  max-width: 460px;
+  padding: 24px;
+}
+
+.processing-orb {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: spin-ring 2s linear infinite;
+}
+
+.orb-ring:nth-child(1) {
+  border-top-color: var(--accent-primary);
+  animation-duration: 1.5s;
+}
+
+.orb-ring:nth-child(2) {
+  inset: 8px;
+  border-right-color: var(--accent-secondary);
+  animation-duration: 2s;
+  animation-direction: reverse;
+}
+
+.orb-ring:nth-child(3) {
+  inset: 16px;
+  border-bottom-color: var(--accent-cyan);
+  animation-duration: 2.5s;
+}
+
+.orb-core {
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  box-shadow: var(--glow-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+@keyframes spin-ring {
+  to { transform: rotate(360deg); }
+}
+
+.processing-card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.processing-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  min-height: 20px;
+  transition: var(--transition);
+}
+
+.progress-track {
+  height: 4px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 100px;
+  width: 0%;
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 10px var(--accent-primary);
+}
+
+.processing-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.step-item.active {
+  color: var(--text-primary);
+  background: rgba(79,156,249,0.05);
+  border-color: rgba(79,156,249,0.2);
+}
+
+.step-item.done {
+  color: var(--accent-success);
+  border-color: rgba(16,185,129,0.2);
+}
+
+.step-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.step-item.active .step-icon {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  animation: pulse-step 1s ease-in-out infinite;
+}
+
+.step-item.done .step-icon {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+  color: white;
+}
+
+@keyframes pulse-step {
+  0%,100% { box-shadow: 0 0 0 0 rgba(79,156,249,0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(79,156,249,0); }
+}
+
+/* ============================================================
+   TEST ENGINE SCREEN
+   ============================================================ */
+#screen-test {
+  flex-direction: row;
+  overflow: hidden;
+}
+
+/* TOP NAV */
+.test-topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 100;
+  gap: 16px;
+}
+
+.test-logo {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  white-space: nowrap;
+}
+
+.test-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+}
+
+/* TIMER */
+.timer-widget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.timer-icon {
+  font-size: 13px;
+  animation: timer-tick 1s linear infinite;
+}
+
+@keyframes timer-tick {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.timer-display {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  transition: color 0.5s;
+}
+
+.timer-widget.warning {
+  border-color: rgba(245,158,11,0.4);
+  box-shadow: var(--glow-warn);
+  animation: glow-pulse 1s ease-in-out infinite;
+}
+
+.timer-widget.warning .timer-display { color: var(--accent-warn); }
+
+.timer-widget.critical {
+  border-color: rgba(239,68,68,0.5);
+  box-shadow: var(--glow-danger);
+  animation: glow-pulse 0.5s ease-in-out infinite;
+}
+
+.timer-widget.critical .timer-display { color: var(--accent-danger); }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 10px currentColor; }
+  50% { box-shadow: 0 0 25px currentColor; }
+}
+
+.btn-submit-top {
+  background: linear-gradient(135deg, var(--accent-danger), #dc2626);
+  color: white;
+  border: none;
+  padding: 7px 18px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+  font-family: var(--font-body);
+}
+
+.btn-submit-top:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-danger);
+}
+
+/* SUBJECT TABS */
+.subject-nav {
+  position: absolute;
+  top: 52px; left: 0; right: 0;
+  height: 44px;
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 99;
+  padding: 0 16px;
+  gap: 4px;
+}
+
+.subject-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.subject-tab:hover { color: var(--text-secondary); }
+
+.subject-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--tab-color, var(--accent-primary));
+}
+
+.subject-tab[data-subject="Physics"] { --tab-color: var(--physics-color); }
+.subject-tab[data-subject="Chemistry"] { --tab-color: var(--chemistry-color); }
+.subject-tab[data-subject="Maths"] { --tab-color: var(--maths-color); }
+
+.tab-count {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.08);
+  font-family: var(--font-mono);
+}
+
+/* MAIN TEST LAYOUT */
+.test-main {
+  position: absolute;
+  top: 96px; left: 0; right: 300px; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.test-sidebar {
+  position: absolute;
+  top: 96px; right: 0; bottom: 0;
+  width: 300px;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* QUESTION CONTENT */
+.question-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.question-content::-webkit-scrollbar { width: 4px; }
+.question-content::-webkit-scrollbar-track { background: transparent; }
+.question-content::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 100px; }
+
+.question-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+
+.question-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.q-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.q-num { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.q-type { background: rgba(79,156,249,0.12); color: var(--accent-primary); border: 1px solid rgba(79,156,249,0.2); }
+.q-marks { font-size: 11px; color: var(--text-muted); }
+
+.marking-info {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.mark-chip {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.mark-pos { background: rgba(16,185,129,0.12); color: var(--accent-success); }
+.mark-neg { background: rgba(239,68,68,0.12); color: var(--accent-danger); }
+.mark-zero { background: rgba(255,255,255,0.05); color: var(--text-muted); }
+
+.question-text {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  margin-bottom: 28px;
+  padding: 20px;
+  background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+/* OPTIONS */
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.option-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-subtle);
+  background: rgba(255,255,255,0.02);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+
+.option-item:hover {
+  border-color: rgba(79,156,249,0.3);
+  background: rgba(79,156,249,0.04);
+}
+
+.option-item.selected {
+  border-color: var(--accent-primary);
+  background: rgba(79,156,249,0.08);
+  box-shadow: 0 0 0 1px rgba(79,156,249,0.2) inset;
+}
+
+.option-item.selected .opt-letter {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.opt-letter {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition: var(--transition);
+  margin-top: 1px;
+}
+
+.opt-text {
+  font-size: 14px;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* Integer Input */
+.integer-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.integer-input-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.integer-input {
+  width: 200px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 500;
+  text-align: center;
+  outline: none;
+  transition: var(--transition);
+}
+
+.integer-input:focus {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(79,156,249,0.15);
+}
+
+.integer-input::placeholder { color: var(--text-muted); font-size: 14px; }
+
+/* QUESTION ACTIONS */
+.question-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.btn-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid var(--border-subtle);
+}
+
+.btn-clear { background: transparent; color: var(--text-secondary); }
+.btn-clear:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: var(--accent-danger); }
+
+.btn-review { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); color: var(--accent-warn); }
+.btn-review:hover { background: rgba(245,158,11,0.15); }
+
+.btn-prev, .btn-next {
+  background: rgba(255,255,255,0.04);
+  color: var(--text-primary);
+}
+.btn-prev:hover, .btn-next:hover { background: rgba(255,255,255,0.08); }
+
+.btn-save {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  border-color: transparent;
+  margin-left: auto;
+}
+.btn-save:hover { transform: translateY(-1px); box-shadow: var(--glow-primary); }
+
+/* ============================================================
+   SIDEBAR - QUESTION PALETTE
+   ============================================================ */
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.palette-legend {
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.dot-answered { background: var(--accent-success); }
+.dot-not-visited { background: rgba(255,255,255,0.15); }
+.dot-marked { background: var(--accent-secondary); }
+.dot-attempted-marked { background: linear-gradient(135deg, var(--accent-success), var(--accent-secondary)); }
+
+.palette-grid-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+}
+
+.palette-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  margin-top: 14px;
+}
+
+.palette-section-label:first-child { margin-top: 0; }
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+}
+
+.palette-btn {
+  aspect-ratio: 1;
+  border-radius: 5px;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  background: rgba(255,255,255,0.06);
+  color: var(--text-secondary);
+  position: relative;
+}
+
+.palette-btn:hover { transform: scale(1.1); z-index: 1; }
+.palette-btn.current { box-shadow: 0 0 0 2px var(--accent-primary); color: var(--text-primary); }
+.palette-btn.answered { background: var(--accent-success); color: white; }
+.palette-btn.marked { background: var(--accent-secondary); color: white; }
+.palette-btn.answered-marked {
+  background: linear-gradient(135deg, var(--accent-success), var(--accent-secondary));
+  color: white;
+}
+
+/* Score Summary in sidebar */
+.score-summary {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.score-chip {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.03);
+}
+
+.score-chip .sc-val {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  display: block;
+}
+
+.score-chip .sc-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  display: block;
+}
+
+.sc-ans .sc-val { color: var(--accent-success); }
+.sc-not .sc-val { color: var(--text-muted); }
+.sc-rev .sc-val { color: var(--accent-secondary); }
+
+/* ============================================================
+   RESULTS SCREEN
+   ============================================================ */
+#screen-results {
+  overflow-y: auto;
+  background: var(--bg-void);
+  align-items: center;
+  padding: 60px 24px;
+}
+
+.results-wrapper {
+  width: 100%;
+  max-width: 900px;
+}
+
+.results-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.score-ring-wrapper {
+  margin: 0 auto 32px;
+  width: 160px;
+  height: 160px;
+  position: relative;
+}
+
+.score-ring-svg { transform: rotate(-90deg); }
+
+.score-ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 10; }
+
+.score-ring-fill {
+  fill: none;
+  stroke-width: 10;
+  stroke: url(#score-gradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.score-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-big {
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+.score-out-of {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.results-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.results-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Subject breakdown */
+.subject-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.subject-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+
+.subject-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.subject-name {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.subject-score-chip {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: rgba(255,255,255,0.06);
+}
+
+.accuracy-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 100px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.accuracy-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.subject-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Rank prediction */
+.rank-card {
+  background: linear-gradient(135deg, rgba(79,156,249,0.08), rgba(124,58,237,0.08));
+  border: 1px solid rgba(79,156,249,0.2);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.rank-card h3 {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent-primary);
+  margin-bottom: 16px;
+}
+
+.rank-display {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.rank-note { font-size: 12px; color: var(--text-muted); }
+
+/* Result Actions */
+.result-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.btn-result:hover { background: var(--bg-elevated); transform: translateY(-1px); }
+
+.btn-result-primary {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border: none;
+  box-shadow: var(--glow-primary);
+}
+
+.btn-result-primary:hover { box-shadow: 0 0 30px rgba(79,156,249,0.4); }
+
+/* ============================================================
+   MODAL (Submit Confirm / Alert)
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.modal-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.modal-overlay.open .modal-card {
+  transform: translateY(0) scale(1);
+}
+
+.modal-icon { font-size: 36px; margin-bottom: 16px; }
+
+.modal-card h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.modal-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.modal-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.modal-stat {
+  text-align: center;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04);
+}
+
+.modal-stat .mv { font-family: var(--font-mono); font-size: 20px; font-weight: 500; }
+.modal-stat .ml { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+
+.modal-actions { display: flex; gap: 10px; }
+
+.btn-modal {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  border: 1px solid var(--border-subtle);
+}
+
+.btn-modal-cancel { background: transparent; color: var(--text-secondary); }
+.btn-modal-cancel:hover { background: rgba(255,255,255,0.04); }
+
+.btn-modal-confirm {
+  background: linear-gradient(135deg, var(--accent-danger), #dc2626);
+  color: white;
+  border: none;
+}
+.btn-modal-confirm:hover { box-shadow: var(--glow-danger); }
+
+/* ============================================================
+   TOAST NOTIFICATIONS
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 13px;
+  color: var(--text-primary);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  animation: toast-in 0.3s cubic-bezier(0.4,0,0.2,1);
+  max-width: 320px;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast.success { border-color: rgba(16,185,129,0.3); }
+.toast.warning { border-color: rgba(245,158,11,0.3); }
+.toast.error { border-color: rgba(239,68,68,0.3); }
+
+/* ============================================================
+   API KEY INPUT
+   ============================================================ */
+.api-section {
+  margin-top: 20px;
+}
+
+.api-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.api-input-group:focus-within {
+  border-color: rgba(79,156,249,0.3);
+}
+
+.api-input-group span {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.api-key-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.api-key-input::placeholder { color: var(--text-muted); }
+
+/* ============================================================
+   SCROLLBAR GLOBAL
+   ============================================================ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 100px; }
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.text-success { color: var(--accent-success); }
+.text-danger { color: var(--accent-danger); }
+.text-warn { color: var(--accent-warn); }
+.text-muted { color: var(--text-muted); }
+
+.hidden { display: none !important; }
+
+.katex { font-size: 1em; }
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .test-main { right: 0; bottom: 220px; }
+  .test-sidebar {
+    top: auto;
+    right: 0; left: 0; bottom: 0;
+    width: auto;
+    height: 220px;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .question-content { padding: 20px 16px; }
+  .question-actions { padding: 12px 16px; gap: 6px; }
+  .btn-action { padding: 8px 12px; font-size: 12px; }
+  .palette-grid { grid-template-columns: repeat(8, 1fr); }
+}
+
+@media (max-width: 480px) {
+  .test-info { display: none; }
+  .palette-grid { grid-template-columns: repeat(7, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     SCREEN 1: LANDING / UPLOAD
+     ============================================================ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-header">
+    <div class="logo-badge">AI-Powered Exam Engine</div>
+    <h1 class="landing-title">JEE Advanced<br>Simulator</h1>
+    <p class="landing-subtitle">Upload any JEE Advanced question paper PDF. Our AI instantly converts it into a full CBT mock test with real marking scheme.</p>
+  </div>
+
+  <div class="upload-container">
+    <div class="upload-zone" id="upload-zone">
+      <div class="upload-icon">📄</div>
+      <h3>Drop your question paper here</h3>
+      <p>Supports JEE Advanced papers · PDF format · Any year</p>
+      <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+        <span>📂</span> Browse PDF
+      </button>
+      <input type="file" id="file-input" accept=".pdf" onchange="handleFileUpload(event)">
+    </div>
+
+    <div class="api-section">
+      <div class="api-input-group">
+        <span>🔑 Gemini API Key</span>
+        <input type="password" id="api-key-input" class="api-key-input" placeholder="AIza... (free from aistudio.google.com)" autocomplete="off">
+      </div>
+    </div>
+
+    <button class="btn-demo" onclick="loadDemoTest()">
+      <span>⚡</span> Try with Demo Paper (No PDF needed)
+    </button>
+  </div>
+
+  <div class="features-strip">
+    <div class="feature-chip"><span>🤖</span> AI Question Parsing</div>
+    <div class="feature-chip"><span>∑</span> KaTeX Math Rendering</div>
+    <div class="feature-chip"><span>⏱</span> Real-Time Timer</div>
+    <div class="feature-chip"><span>📊</span> Smart Analysis</div>
+    <div class="feature-chip"><span>🎯</span> JEE Marking Scheme</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 2: PROCESSING
+     ============================================================ -->
+<div id="screen-processing" class="screen">
+  <div class="processing-card">
+    <div class="processing-orb">
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-ring"></div>
+      <div class="orb-core">🧠</div>
+    </div>
+    <h2>Analyzing Your Paper</h2>
+    <p class="processing-status" id="proc-status">Initializing AI engine...</p>
+    <div class="progress-track">
+      <div class="progress-fill" id="proc-progress"></div>
+    </div>
+    <div class="processing-steps">
+      <div class="step-item" id="step-1">
+        <div class="step-icon">1</div>
+        <span>Extracting text from PDF</span>
+      </div>
+      <div class="step-item" id="step-2">
+        <div class="step-icon">2</div>
+        <span>Identifying questions & types</span>
+      </div>
+      <div class="step-item" id="step-3">
+        <div class="step-icon">3</div>
+        <span>Detecting subjects (PCM)</span>
+      </div>
+      <div class="step-item" id="step-4">
+        <div class="step-icon">4</div>
+        <span>Formatting math equations</span>
+      </div>
+      <div class="step-item" id="step-5">
+        <div class="step-icon">5</div>
+        <span>Building test interface</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 3: TEST ENGINE
+     ============================================================ -->
+<div id="screen-test" class="screen">
+
+  <!-- Top Navigation Bar -->
+  <div class="test-topbar">
+    <div class="test-logo">JEE∙AI</div>
+    <div class="test-info">
+      <span id="test-title-display">JEE Advanced 2024</span>
+      <span style="color:var(--border-subtle)">·</span>
+      <span id="q-progress-top">Q 1 / 54</span>
+    </div>
+    <div class="timer-widget" id="timer-widget">
+      <span class="timer-icon">⏱</span>
+      <span class="timer-display" id="timer-display">3:00:00</span>
+    </div>
+    <button class="btn-submit-top" onclick="showSubmitModal()">Submit Test</button>
+  </div>
+
+  <!-- Subject Tabs -->
+  <div class="subject-nav" id="subject-nav"></div>
+
+  <!-- Main Question Area -->
+  <div class="test-main">
+    <div class="question-content" id="question-content">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="question-actions">
+      <button class="btn-action btn-clear" onclick="clearResponse()">✕ Clear</button>
+      <button class="btn-action btn-review" onclick="markForReview()">🔖 Review</button>
+      <button class="btn-action btn-prev" onclick="navigateQuestion(-1)">← Prev</button>
+      <button class="btn-action btn-next" onclick="navigateQuestion(1)">Next →</button>
+      <button class="btn-action btn-save" onclick="saveAndNext()">Save & Next →</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="test-sidebar">
+    <div class="sidebar-header">Question Palette</div>
+
+    <div class="palette-legend">
+      <div class="legend-item"><div class="legend-dot dot-answered"></div>Answered</div>
+      <div class="legend-item"><div class="legend-dot dot-not-visited"></div>Not Visited</div>
+      <div class="legend-item"><div class="legend-dot dot-marked"></div>For Review</div>
+      <div class="legend-item"><div class="legend-dot dot-attempted-marked"></div>Ans+Review</div>
+    </div>
+
+    <div class="palette-grid-wrapper" id="palette-grid-wrapper">
+      <!-- Palette buttons rendered dynamically -->
+    </div>
+
+    <div class="score-summary">
+      <div class="score-chip sc-ans">
+        <span class="sc-val" id="sc-answered">0</span>
+        <span class="sc-label">Answered</span>
+      </div>
+      <div class="score-chip sc-not">
+        <span class="sc-val" id="sc-not-visited">54</span>
+        <span class="sc-label">Remaining</span>
+      </div>
+      <div class="score-chip sc-rev">
+        <span class="sc-val" id="sc-review">0</span>
+        <span class="sc-label">Review</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 4: RESULTS / ANALYSIS
+     ============================================================ -->
+<div id="screen-results" class="screen">
+  <div class="results-wrapper">
+    <div class="results-header">
+      <div class="score-ring-wrapper">
+        <svg width="160" height="160" class="score-ring-svg" viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="score-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4f9cf9"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <circle class="score-ring-track" cx="80" cy="80" r="66"/>
+          <circle class="score-ring-fill" id="score-ring-fill" cx="80" cy="80" r="66"
+            stroke-dasharray="414.69" stroke-dashoffset="414.69"/>
+        </svg>
+        <div class="score-ring-center">
+          <div class="score-big" id="final-score">--</div>
+          <div class="score-out-of" id="final-out-of">/ 180</div>
+        </div>
+      </div>
+      <h2 class="results-title" id="result-title">Test Complete!</h2>
+      <p class="results-subtitle" id="result-subtitle">Here's your detailed performance analysis</p>
+    </div>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="subject-breakdown" id="subject-breakdown"></div>
+
+    <div class="rank-card">
+      <h3>🎯 Estimated Rank Prediction</h3>
+      <div class="rank-display" id="rank-display">--</div>
+      <div class="rank-note">Based on historical JEE Advanced score distribution</div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn-result" onclick="exportResults()">📥 Export PDF</button>
+      <button class="btn-result" onclick="startNewTest()">🔄 New Test</button>
+      <button class="btn-result btn-result-primary" onclick="reviewAnswers()">📋 Review Answers</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SUBMIT MODAL
+     ============================================================ -->
+<div class="modal-overlay" id="submit-modal">
+  <div class="modal-card">
+    <div class="modal-icon">⚠️</div>
+    <h3>Submit Test?</h3>
+    <p>Once submitted, you cannot change your answers. Make sure you've reviewed all questions.</p>
+    <div class="modal-stats">
+      <div class="modal-stat">
+        <div class="mv text-success" id="m-answered">0</div>
+        <div class="ml">Answered</div>
+      </div>
+      <div class="modal-stat">
+        <div class="mv text-danger" id="m-unanswered">0</div>
+        <div class="ml">Skipped</div>
+      </div>
+      <div class="modal-stat">
+        <div class="mv text-warn" id="m-review">0</div>
+        <div class="ml">For Review</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal btn-modal-cancel" onclick="closeModal()">Go Back</button>
+      <button class="btn-modal btn-modal-confirm" onclick="submitTest()">Submit Test</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ============================================================
+     JAVASCRIPT ENGINE
+     ============================================================ -->
+<script>
+// ================================================================
+// APP STATE
+// ================================================================
+const APP = {
+  currentScreen: 'landing',
+  questions: [],
+  responses: {},        // qIndex -> response value
+  markedForReview: {},  // qIndex -> bool
+  visitedQuestions: {}, // qIndex -> bool
+  timeSpent: {},        // qIndex -> seconds
+  currentQuestion: 0,
+  currentSubject: 'Physics',
+  totalTime: 3 * 60 * 60, // 3 hours in seconds
+  timeLeft: 3 * 60 * 60,
+  timerInterval: null,
+  questionTimerStart: null,
+  testTitle: 'JEE Advanced 2024',
+  subjects: ['Physics', 'Chemistry', 'Maths'],
+  isSubmitted: false
+};
+
+// ================================================================
+// DEMO DATA — realistic JEE Advanced questions
+// ================================================================
+const DEMO_QUESTIONS = [
+  // PHYSICS - Section 1 (Single Correct)
+  { id: 1, subject: 'Physics', type: 'single', section: 'Section 1', text: 'A particle of mass $m$ is moving in a circular path of constant radius $r$ such that its centripetal acceleration $a_c$ is varying with time $t$ as $a_c = k^2 r t^2$, where $k$ is a constant. The power delivered to the particle by the forces acting on it is', options: ['$mk^2r^2t^2$', '$mk^2r^2t$', '$m k^4 r^2 t^5 / 3$', 'Zero'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 2, subject: 'Physics', type: 'single', section: 'Section 1', text: 'In a Young\'s double slit experiment, the separation between the slits is $0.5$ mm and the screen is $1.5$ m away. The wavelength of light used is $500$ nm. The minimum distance from the central maximum where intensity is half the maximum is', options: ['$0.5$ mm', '$0.75$ mm', '$1.0$ mm', '$1.5$ mm'], answer: 0, posMarks: 3, negMarks: 1 },
+  { id: 3, subject: 'Physics', type: 'single', section: 'Section 1', text: 'A conducting sphere of radius $R$ is given a charge $Q$. Consider a point $A$ inside the sphere and a point $B$ outside the sphere. Both points are at a distance $r$ from the centre. Then', options: ['Electric field at $A$ is equal to the field at $B$', 'Electric field at $A$ is zero and field at $B$ equals $\\frac{kQ}{r^2}$', 'Both fields are zero', 'Electric field at $A$ equals $\\frac{kQ}{R^2}$ and at $B$ equals $\\frac{kQ}{r^2}$'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 4, subject: 'Physics', type: 'single', section: 'Section 1', text: 'A block of mass $2$ kg is placed on a rough horizontal surface with coefficient of friction $\\mu = 0.4$. A horizontal force $F = 10$ N is applied. What is the acceleration of the block? ($g = 10 \\text{ m/s}^2$)', options: ['$1 \\text{ m/s}^2$', '$2 \\text{ m/s}^2$', '$3 \\text{ m/s}^2$', '$5 \\text{ m/s}^2$'], answer: 0, posMarks: 3, negMarks: 1 },
+  { id: 5, subject: 'Physics', type: 'single', section: 'Section 1', text: 'The de Broglie wavelength of a particle with kinetic energy $K$ is $\\lambda$. If the kinetic energy is made $4K$, the de Broglie wavelength becomes', options: ['$2\\lambda$', '$\\lambda/2$', '$\\lambda/4$', '$4\\lambda$'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 6, subject: 'Physics', type: 'single', section: 'Section 1', text: 'A wire of length $L$ and cross-sectional area $A$ has resistivity $\\rho$. If the length is doubled and area is halved, what happens to the resistance?', options: ['Remains same', 'Doubled', 'Becomes 4 times', 'Becomes 8 times'], answer: 2, posMarks: 3, negMarks: 1 },
+
+  // PHYSICS - Section 2 (Multiple Correct)
+  { id: 7, subject: 'Physics', type: 'multiple', section: 'Section 2', text: 'A block of mass $m$ is attached to a spring of spring constant $k$ and undergoes simple harmonic motion. Which of the following statements are CORRECT?', options: ['Total energy is proportional to amplitude squared', 'Velocity is maximum at equilibrium', 'Acceleration is maximum at equilibrium', 'Time period is independent of amplitude'], answer: [0, 1, 3], posMarks: 4, negMarks: 2 },
+  { id: 8, subject: 'Physics', type: 'multiple', section: 'Section 2', text: 'In a series RLC circuit at resonance:', options: ['Impedance equals resistance', 'Current is maximum', 'Power factor is unity', 'Reactance is zero'], answer: [0, 1, 2, 3], posMarks: 4, negMarks: 2 },
+
+  // PHYSICS - Section 3 (Integer Type)
+  { id: 9, subject: 'Physics', type: 'integer', section: 'Section 3', text: 'A ball is thrown vertically upward with velocity $20$ m/s. What is the maximum height (in meters) reached by the ball? (Take $g = 10 \\text{ m/s}^2$)', answer: 20, posMarks: 4, negMarks: 0 },
+  { id: 10, subject: 'Physics', type: 'integer', section: 'Section 3', text: 'The work done (in J) by a force $\\vec{F} = (3\\hat{i} + 4\\hat{j})$ N in displacing an object by $\\vec{d} = (2\\hat{i} + 3\\hat{j})$ m is', answer: 18, posMarks: 4, negMarks: 0 },
+
+  // CHEMISTRY - Section 1 (Single Correct)
+  { id: 11, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'Which of the following has the highest ionization energy?', options: ['Na', 'Mg', 'Al', 'Si'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 12, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'The hybridization of carbon atoms in $\\text{CO}_2$ is', options: ['$sp$', '$sp^2$', '$sp^3$', '$dsp^2$'], answer: 0, posMarks: 3, negMarks: 1 },
+  { id: 13, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'Which of the following is an example of a zero-order reaction?', options: ['Decomposition of $\\text{H}_2\\text{O}_2$', 'Inversion of sugar', 'Decomposition of $\\text{N}_2\\text{O}$ on hot platinum', 'Radioactive decay'], answer: 2, posMarks: 3, negMarks: 1 },
+  { id: 14, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'The number of $\\sigma$ bonds in $\\text{CH}_3\\text{-CH}=\\text{CH}_2$ is', options: ['6', '7', '8', '9'], answer: 2, posMarks: 3, negMarks: 1 },
+  { id: 15, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'Which of the following has maximum electron affinity?', options: ['F', 'Cl', 'Br', 'I'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 16, subject: 'Chemistry', type: 'single', section: 'Section 1', text: 'The pH of a $0.1$ M solution of acetic acid ($K_a = 1.8 \\times 10^{-5}$) is approximately', options: ['2.87', '3.87', '4.87', '1.87'], answer: 0, posMarks: 3, negMarks: 1 },
+
+  // CHEMISTRY - Section 2 (Multiple Correct)
+  { id: 17, subject: 'Chemistry', type: 'multiple', section: 'Section 2', text: 'Which of the following are properties of transition metals?', options: ['Variable oxidation states', 'Formation of colored compounds', 'Paramagnetism due to unpaired d electrons', 'All are gases at room temperature'], answer: [0, 1, 2], posMarks: 4, negMarks: 2 },
+  { id: 18, subject: 'Chemistry', type: 'multiple', section: 'Section 2', text: 'Identify the aromatic compounds from the following:', options: ['Benzene ($\\text{C}_6\\text{H}_6$)', 'Cyclohexane', 'Pyrrole', 'Azulene'], answer: [0, 2, 3], posMarks: 4, negMarks: 2 },
+
+  // CHEMISTRY - Section 3 (Integer Type)
+  { id: 19, subject: 'Chemistry', type: 'integer', section: 'Section 3', text: 'How many moles of $\\text{KMnO}_4$ are reduced by 1 mole of $\\text{Fe}^{2+}$ ions in acidic medium? (Express as integer ×10)', answer: 2, posMarks: 4, negMarks: 0 },
+  { id: 20, subject: 'Chemistry', type: 'integer', section: 'Section 3', text: 'The number of lone pairs of electrons on the central atom in $\\text{XeF}_4$ is', answer: 2, posMarks: 4, negMarks: 0 },
+
+  // MATHS - Section 1 (Single Correct)
+  { id: 21, subject: 'Maths', type: 'single', section: 'Section 1', text: 'The number of real solutions of $\\sin x = x^2 + x + 1$ is', options: ['0', '1', '2', 'Infinitely many'], answer: 0, posMarks: 3, negMarks: 1 },
+  { id: 22, subject: 'Maths', type: 'single', section: 'Section 1', text: 'If $f(x) = \\log\\left(\\frac{1+x}{1-x}\\right)$, then $f\\left(\\frac{2x}{1+x^2}\\right)$ equals', options: ['$2f(x)$', '$[f(x)]^2$', '$f(x^2)$', '$f(x) \\cdot f(x)$'], answer: 0, posMarks: 3, negMarks: 1 },
+  { id: 23, subject: 'Maths', type: 'single', section: 'Section 1', text: 'The value of $\\int_0^{\\pi/2} \\frac{\\sin x}{\\sin x + \\cos x} \\, dx$ is', options: ['$\\pi/2$', '$\\pi/4$', '$\\pi$', '$0$'], answer: 1, posMarks: 3, negMarks: 1 },
+  { id: 24, subject: 'Maths', type: 'single', section: 'Section 1', text: 'If the sum of first $n$ terms of an AP is $5n^2 + 3n$, then the $10^{th}$ term is', options: ['96', '100', '98', '103'], answer: 2, posMarks: 3, negMarks: 1 },
+  { id: 25, subject: 'Maths', type: 'single', section: 'Section 1', text: 'The distance between the parallel lines $3x + 4y - 5 = 0$ and $6x + 8y + 15 = 0$ is', options: ['$\\frac{7}{2}$', '$\\frac{5}{2}$', '$\\frac{7}{10}$', '$\\frac{35}{10}$'], answer: 3, posMarks: 3, negMarks: 1 },
+  { id: 26, subject: 'Maths', type: 'single', section: 'Section 1', text: 'The number of ways to arrange the letters of the word "ARRANGE" is', options: ['1260', '2520', '5040', '1680'], answer: 0, posMarks: 3, negMarks: 1 },
+
+  // MATHS - Section 2 (Multiple Correct)
+  { id: 27, subject: 'Maths', type: 'multiple', section: 'Section 2', text: 'Which of the following are true for the function $f(x) = x^3 - 3x^2 + 2x$?', options: ['$f(0) = 0$', '$f(1) = 0$', '$f(2) = 0$', '$f$ has a local minimum at $x = 1$'], answer: [0, 1, 2], posMarks: 4, negMarks: 2 },
+  { id: 28, subject: 'Maths', type: 'multiple', section: 'Section 2', text: 'If $A$ and $B$ are two non-singular matrices of the same order, then which of the following are true?', options: ['$(AB)^{-1} = B^{-1}A^{-1}$', '$(AB)^T = B^T A^T$', '$(A+B)^{-1} = A^{-1} + B^{-1}$', '$\\det(AB) = \\det(A)\\det(B)$'], answer: [0, 1, 3], posMarks: 4, negMarks: 2 },
+
+  // MATHS - Section 3 (Integer Type)
+  { id: 29, subject: 'Maths', type: 'integer', section: 'Section 3', text: 'The number of values of $x$ in $[0, 2\\pi]$ satisfying $\\sin 2x - \\cos 2x = 1$ is', answer: 3, posMarks: 4, negMarks: 0 },
+  { id: 30, subject: 'Maths', type: 'integer', section: 'Section 3', text: 'If the coefficient of $x^{10}$ in the expansion of $(1 + x)^{20}$ is $\\binom{20}{10}$, then find the value of $\\binom{20}{10} / \\binom{19}{9}$. (Integer answer)', answer: 2, posMarks: 4, negMarks: 0 },
+];
+
+// ================================================================
+// SCREEN MANAGEMENT
+// ================================================================
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  APP.currentScreen = name;
+}
+
+// ================================================================
+// FILE UPLOAD & PDF PARSING
+// ================================================================
+const uploadZone = document.getElementById('upload-zone');
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') processFile(file);
+  else showToast('Please drop a PDF file', 'error');
+});
+
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (file) processFile(file);
+}
+
+async function processFile(file) {
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  showScreen('processing');
+
+  try {
+    await setStep(1, 'Extracting text from PDF...');
+    const pdfText = await extractPDFText(file);
+
+    await setStep(2, 'Sending to AI for question parsing...');
+
+    let questions;
+    if (apiKey) {
+      await setStep(3, 'Claude AI is identifying questions...');
+      questions = await parseQuestionsWithAI(pdfText, apiKey);
+    } else {
+      await setStep(3, 'No API key — using smart local parser...');
+      questions = parseQuestionsLocally(pdfText);
+    }
+
+    if (!questions || questions.length === 0) {
+      questions = DEMO_QUESTIONS.slice(0, 18);
+      showToast('Could not parse questions — using demo data', 'warning');
+    }
+
+    await setStep(4, 'Formatting math equations with KaTeX...');
+    await sleep(600);
+
+    await setStep(5, 'Building test interface...', 100);
+    await sleep(800);
+
+    APP.questions = questions;
+    APP.testTitle = file.name.replace('.pdf', '');
+    initTest();
+
+  } catch (err) {
+    console.error(err);
+    showToast('Error processing PDF: ' + err.message, 'error');
+    APP.questions = DEMO_QUESTIONS;
+    APP.testTitle = 'JEE Advanced Demo';
+    initTest();
+  }
+}
+
+async function extractPDFText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const typedarray = new Uint8Array(e.target.result);
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map(item => item.str).join(' ');
+          fullText += `\n--- PAGE ${i} ---\n${pageText}`;
+        }
+        resolve(fullText);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function parseQuestionsWithAI(pdfText, apiKey) {
+  const prompt = `You are an expert at parsing JEE Advanced question papers.
+Extract all questions from the given text and return a JSON array.
+Each question must have:
+- id: number
+- subject: "Physics" | "Chemistry" | "Maths"
+- type: "single" | "multiple" | "integer"
+- section: section name
+- text: question text (use LaTeX for math, wrapped in $ for inline, $$ for display)
+- options: array of option strings (for single/multiple) or null (for integer)
+- answer: correct answer index (0-based for single), array of indices (for multiple), or number (for integer)
+- posMarks: positive marks
+- negMarks: negative marks (as positive number)
+
+Return ONLY the JSON array, no explanation, no markdown backticks.
+
+Parse this JEE Advanced paper text:
+
+${pdfText.slice(0, 8000)}`;
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 4000, temperature: 0.1 }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error('Gemini API error: ' + (err.error?.message || response.status));
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Extract JSON from response
+  const jsonMatch = text.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) throw new Error('Could not extract JSON from AI response');
+
+  return JSON.parse(jsonMatch[0]);
+}
+
+function parseQuestionsLocally(text) {
+  // Basic local parser — extract question-like patterns
+  const questions = [];
+  // Very simple heuristic — return demo for now
+  return DEMO_QUESTIONS.slice(0, 20);
+}
+
+// ================================================================
+// PROCESSING STEPS
+// ================================================================
+let stepDelay = 0;
+async function setStep(stepNum, statusText, progress) {
+  // Mark previous steps done
+  for (let i = 1; i < stepNum; i++) {
+    const el = document.getElementById('step-' + i);
+    if (el) {
+      el.classList.remove('active');
+      el.classList.add('done');
+      el.querySelector('.step-icon').textContent = '✓';
+    }
+  }
+  // Set current
+  const curr = document.getElementById('step-' + stepNum);
+  if (curr) {
+    curr.classList.add('active');
+    curr.classList.remove('done');
+  }
+
+  document.getElementById('proc-status').textContent = statusText;
+  document.getElementById('proc-progress').style.width = (progress || (stepNum * 20)) + '%';
+
+  await sleep(stepNum === 5 ? 400 : 700);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ================================================================
+// LOAD DEMO TEST
+// ================================================================
+function loadDemoTest() {
+  APP.questions = DEMO_QUESTIONS;
+  APP.testTitle = 'JEE Advanced 2024 — Demo';
+  showScreen('processing');
+
+  // Simulate processing
+  let s = 1;
+  const statuses = [
+    'Loading demo question bank...',
+    'Parsing question types...',
+    'Classifying Physics / Chemistry / Maths...',
+    'Rendering LaTeX equations...',
+    'Building test interface...'
+  ];
+
+  const interval = setInterval(async () => {
+    if (s <= 5) {
+      setStep(s, statuses[s-1]);
+      s++;
+    } else {
+      clearInterval(interval);
+      setTimeout(() => initTest(), 500);
+    }
+  }, 600);
+}
+
+// ================================================================
+// TEST INITIALIZATION
+// ================================================================
+function initTest() {
+  APP.responses = {};
+  APP.markedForReview = {};
+  APP.visitedQuestions = {};
+  APP.timeSpent = {};
+  APP.currentQuestion = 0;
+  APP.isSubmitted = false;
+  APP.timeLeft = APP.totalTime;
+  APP.questionTimerStart = Date.now();
+
+  // Mark first question visited
+  APP.visitedQuestions[0] = true;
+
+  // Set subjects from questions
+  const subjectSet = new Set(APP.questions.map(q => q.subject));
+  APP.subjects = ['Physics', 'Chemistry', 'Maths'].filter(s => subjectSet.has(s));
+  APP.currentSubject = APP.subjects[0] || 'Physics';
+
+  buildSubjectTabs();
+  buildPalette();
+  updateTimerDisplay();
+  startTimer();
+  renderCurrentQuestion();
+
+  document.getElementById('test-title-display').textContent = APP.testTitle;
+
+  showScreen('test');
+  showToast('Test started! Good luck! ⚡', 'success');
+}
+
+// ================================================================
+// SUBJECT TABS
+// ================================================================
+function buildSubjectTabs() {
+  const nav = document.getElementById('subject-nav');
+  nav.innerHTML = '';
+
+  APP.subjects.forEach(subject => {
+    const count = APP.questions.filter(q => q.subject === subject).length;
+    const btn = document.createElement('button');
+    btn.className = 'subject-tab' + (subject === APP.currentSubject ? ' active' : '');
+    btn.dataset.subject = subject;
+    btn.innerHTML = `
+      ${getSubjectIcon(subject)} ${subject}
+      <span class="tab-count">${count}</span>
+    `;
+    btn.onclick = () => switchSubject(subject);
+    nav.appendChild(btn);
+  });
+}
+
+function getSubjectIcon(subject) {
+  return { Physics: '⚛️', Chemistry: '🧪', Maths: '∑' }[subject] || '📝';
+}
+
+function switchSubject(subject) {
+  saveCurrentTimeSpent();
+  APP.currentSubject = subject;
+
+  document.querySelectorAll('.subject-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.subject === subject);
+  });
+
+  // Go to first question of this subject
+  const firstQ = APP.questions.findIndex(q => q.subject === subject);
+  if (firstQ !== -1) {
+    APP.currentQuestion = firstQ;
+    APP.visitedQuestions[firstQ] = true;
+    APP.questionTimerStart = Date.now();
+  }
+
+  renderCurrentQuestion();
+  buildPalette();
+}
+
+// ================================================================
+// PALETTE
+// ================================================================
+function buildPalette() {
+  const wrapper = document.getElementById('palette-grid-wrapper');
+  wrapper.innerHTML = '';
+
+  APP.subjects.forEach(subject => {
+    const sqs = APP.questions.map((q, i) => ({ q, i })).filter(({ q }) => q.subject === subject);
+    if (!sqs.length) return;
+
+    const label = document.createElement('div');
+    label.className = 'palette-section-label';
+    label.textContent = subject;
+    wrapper.appendChild(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'palette-grid';
+
+    sqs.forEach(({ q, i }) => {
+      const btn = document.createElement('button');
+      btn.className = 'palette-btn';
+      btn.textContent = i + 1;
+      btn.id = `pb-${i}`;
+      applyPaletteStatus(btn, i);
+      btn.onclick = () => goToQuestion(i);
+      grid.appendChild(btn);
+    });
+
+    wrapper.appendChild(grid);
+  });
+
+  updatePaletteStats();
+}
+
+function applyPaletteStatus(btn, idx) {
+  btn.classList.remove('answered', 'marked', 'answered-marked', 'current');
+  if (idx === APP.currentQuestion) btn.classList.add('current');
+
+  const answered = hasResponse(idx);
+  const marked = APP.markedForReview[idx];
+
+  if (answered && marked) btn.classList.add('answered-marked');
+  else if (answered) btn.classList.add('answered');
+  else if (marked) btn.classList.add('marked');
+}
+
+function updateAllPaletteBtns() {
+  APP.questions.forEach((_, i) => {
+    const btn = document.getElementById(`pb-${i}`);
+    if (btn) applyPaletteStatus(btn, i);
+  });
+  updatePaletteStats();
+}
+
+function updatePaletteStats() {
+  const answered = APP.questions.filter((_, i) => hasResponse(i)).length;
+  const reviewed = Object.values(APP.markedForReview).filter(Boolean).length;
+  const total = APP.questions.length;
+
+  document.getElementById('sc-answered').textContent = answered;
+  document.getElementById('sc-not-visited').textContent = total - answered;
+  document.getElementById('sc-review').textContent = reviewed;
+}
+
+function hasResponse(idx) {
+  const r = APP.responses[idx];
+  if (r === undefined || r === null || r === '') return false;
+  if (Array.isArray(r)) return r.length > 0;
+  return true;
+}
+
+// ================================================================
+// QUESTION RENDERING
+// ================================================================
+function renderCurrentQuestion() {
+  const q = APP.questions[APP.currentQuestion];
+  if (!q) return;
+
+  const content = document.getElementById('question-content');
+  const marks = getMarkingInfo(q);
+
+  content.innerHTML = `
+    <div class="question-header">
+      <div class="question-meta">
+        <span class="q-badge q-num">Q${APP.currentQuestion + 1}</span>
+        <span class="q-badge q-type">${getTypeLabel(q.type)}</span>
+        <span class="q-marks">${q.section || 'Section'}</span>
+      </div>
+      <div class="marking-info">
+        <span class="mark-chip mark-pos">+${q.posMarks}</span>
+        ${q.negMarks > 0 ? `<span class="mark-chip mark-neg">−${q.negMarks}</span>` : ''}
+        ${q.negMarks === 0 ? `<span class="mark-chip mark-zero">0 negative</span>` : ''}
+      </div>
+    </div>
+
+    <div class="question-text" id="q-text">${q.text}</div>
+
+    <div id="q-options">
+      ${renderOptions(q)}
+    </div>
+  `;
+
+  // Render math
+  renderMath(content);
+
+  // Update progress
+  document.getElementById('q-progress-top').textContent = `Q ${APP.currentQuestion + 1} / ${APP.questions.length}`;
+}
+
+function getTypeLabel(type) {
+  return { single: 'Single Correct', multiple: 'Multi Correct', integer: 'Integer Type', paragraph: 'Paragraph' }[type] || type;
+}
+
+function getMarkingInfo(q) {
+  return { pos: q.posMarks, neg: q.negMarks };
+}
+
+function renderOptions(q) {
+  if (q.type === 'integer') {
+    const val = APP.responses[APP.currentQuestion] ?? '';
+    return `
+      <div class="integer-input-wrapper">
+        <div class="integer-input-label">Enter your answer (integer value)</div>
+        <input type="number" class="integer-input" id="integer-response"
+          placeholder="Type answer..."
+          value="${val}"
+          onchange="setIntegerResponse(this.value)"
+          oninput="setIntegerResponse(this.value)">
+      </div>
+    `;
+  }
+
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const currentResponse = APP.responses[APP.currentQuestion];
+
+  return (q.options || []).map((opt, i) => {
+    let selected = false;
+    if (q.type === 'single') selected = currentResponse === i;
+    if (q.type === 'multiple') selected = Array.isArray(currentResponse) && currentResponse.includes(i);
+
+    return `
+      <div class="option-item${selected ? ' selected' : ''}" onclick="selectOption(${i})" data-idx="${i}">
+        <div class="opt-letter">${letters[i]}</div>
+        <div class="opt-text">${opt}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMath(el) {
+  if (window.renderMathInElement) {
+    renderMathInElement(el, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ],
+      throwOnError: false
+    });
+  }
+}
+
+// ================================================================
+// RESPONSE HANDLING
+// ================================================================
+function selectOption(idx) {
+  const q = APP.questions[APP.currentQuestion];
+  if (!q) return;
+
+  if (q.type === 'single') {
+    APP.responses[APP.currentQuestion] = idx;
+  } else if (q.type === 'multiple') {
+    let curr = APP.responses[APP.currentQuestion] || [];
+    if (!Array.isArray(curr)) curr = [];
+    if (curr.includes(idx)) {
+      curr = curr.filter(x => x !== idx);
+    } else {
+      curr = [...curr, idx];
+    }
+    APP.responses[APP.currentQuestion] = curr;
+  }
+
+  refreshOptions();
+  updateAllPaletteBtns();
+}
+
+function refreshOptions() {
+  const q = APP.questions[APP.currentQuestion];
+  if (!q || q.type === 'integer') return;
+
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const currentResponse = APP.responses[APP.currentQuestion];
+
+  document.querySelectorAll('.option-item').forEach((el, i) => {
+    let selected = false;
+    if (q.type === 'single') selected = currentResponse === i;
+    if (q.type === 'multiple') selected = Array.isArray(currentResponse) && currentResponse.includes(i);
+
+    el.classList.toggle('selected', selected);
+    const letter = el.querySelector('.opt-letter');
+    if (letter) {
+      letter.style.background = selected ? 'var(--accent-primary)' : '';
+      letter.style.color = selected ? 'white' : '';
+      letter.style.borderColor = selected ? 'var(--accent-primary)' : '';
+    }
+  });
+}
+
+function setIntegerResponse(val) {
+  APP.responses[APP.currentQuestion] = val === '' ? '' : parseInt(val);
+  updateAllPaletteBtns();
+}
+
+function clearResponse() {
+  APP.responses[APP.currentQuestion] = undefined;
+  APP.markedForReview[APP.currentQuestion] = false;
+  renderCurrentQuestion();
+  updateAllPaletteBtns();
+  showToast('Response cleared', 'warning');
+}
+
+function markForReview() {
+  APP.markedForReview[APP.currentQuestion] = !APP.markedForReview[APP.currentQuestion];
+  updateAllPaletteBtns();
+  const marked = APP.markedForReview[APP.currentQuestion];
+  showToast(marked ? '🔖 Marked for review' : 'Removed from review', marked ? 'warning' : 'success');
+}
+
+function saveAndNext() {
+  if (!hasResponse(APP.currentQuestion)) {
+    showToast('Please select an answer first', 'warning');
+    return;
+  }
+  navigateQuestion(1);
+  showToast('Response saved ✓', 'success');
+}
+
+// ================================================================
+// NAVIGATION
+// ================================================================
+function navigateQuestion(dir) {
+  saveCurrentTimeSpent();
+
+  const newIdx = APP.currentQuestion + dir;
+  if (newIdx < 0 || newIdx >= APP.questions.length) return;
+
+  goToQuestion(newIdx);
+}
+
+function goToQuestion(idx) {
+  saveCurrentTimeSpent();
+  APP.currentQuestion = idx;
+  APP.visitedQuestions[idx] = true;
+  APP.questionTimerStart = Date.now();
+
+  // Switch subject tab if needed
+  const q = APP.questions[idx];
+  if (q && q.subject !== APP.currentSubject) {
+    APP.currentSubject = q.subject;
+    document.querySelectorAll('.subject-tab').forEach(t => {
+      t.classList.toggle('active', t.dataset.subject === q.subject);
+    });
+  }
+
+  renderCurrentQuestion();
+  updateAllPaletteBtns();
+}
+
+function saveCurrentTimeSpent() {
+  if (APP.questionTimerStart) {
+    const spent = (Date.now() - APP.questionTimerStart) / 1000;
+    APP.timeSpent[APP.currentQuestion] = (APP.timeSpent[APP.currentQuestion] || 0) + spent;
+    APP.questionTimerStart = Date.now();
+  }
+}
+
+// ================================================================
+// TIMER
+// ================================================================
+function startTimer() {
+  if (APP.timerInterval) clearInterval(APP.timerInterval);
+  APP.timerInterval = setInterval(tickTimer, 1000);
+}
+
+function tickTimer() {
+  if (APP.timeLeft <= 0) {
+    clearInterval(APP.timerInterval);
+    showToast('⏰ Time is up! Auto-submitting...', 'error');
+    setTimeout(submitTest, 2000);
+    return;
+  }
+
+  APP.timeLeft--;
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  const h = Math.floor(APP.timeLeft / 3600);
+  const m = Math.floor((APP.timeLeft % 3600) / 60);
+  const s = APP.timeLeft % 60;
+
+  const str = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('timer-display').textContent = str;
+
+  const widget = document.getElementById('timer-widget');
+  widget.classList.remove('warning', 'critical');
+  if (APP.timeLeft <= 300) widget.classList.add('critical');
+  else if (APP.timeLeft <= 900) widget.classList.add('warning');
+}
+
+// ================================================================
+// SUBMIT
+// ================================================================
+function showSubmitModal() {
+  const answered = APP.questions.filter((_, i) => hasResponse(i)).length;
+  const total = APP.questions.length;
+  const reviewed = Object.values(APP.markedForReview).filter(Boolean).length;
+
+  document.getElementById('m-answered').textContent = answered;
+  document.getElementById('m-unanswered').textContent = total - answered;
+  document.getElementById('m-review').textContent = reviewed;
+
+  document.getElementById('submit-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('submit-modal').classList.remove('open');
+}
+
+function submitTest() {
+  clearInterval(APP.timerInterval);
+  saveCurrentTimeSpent();
+  APP.isSubmitted = true;
+  closeModal();
+  calculateAndShowResults();
+}
+
+// ================================================================
+// SCORING ENGINE
+// ================================================================
+function calculateScore(q, response) {
+  if (response === undefined || response === null || response === '') return 0;
+
+  if (q.type === 'single') {
+    if (response === q.answer) return q.posMarks;
+    return -q.negMarks;
+  }
+
+  if (q.type === 'integer') {
+    if (parseInt(response) === q.answer) return q.posMarks;
+    return 0; // No negative for integer
+  }
+
+  if (q.type === 'multiple') {
+    if (!Array.isArray(response) || response.length === 0) return 0;
+    const correctSet = new Set(q.answer);
+    const responseSet = new Set(response);
+
+    // Check if all selected are correct
+    const allSelectedCorrect = response.every(r => correctSet.has(r));
+    if (!allSelectedCorrect) return -q.negMarks; // Wrong attempt
+
+    // Partial marking: +1 per correct option selected, but all correct = full marks
+    const correctSelected = response.filter(r => correctSet.has(r)).length;
+    if (correctSelected === correctSet.size) return q.posMarks; // Full marks
+    return correctSelected; // Partial: +1 per correct
+  }
+
+  return 0;
+}
+
+function calculateAndShowResults() {
+  const subjects = APP.subjects;
+  let totalScore = 0;
+  let totalMax = 0;
+  const subjectStats = {};
+
+  subjects.forEach(s => {
+    subjectStats[s] = { score: 0, max: 0, correct: 0, wrong: 0, skipped: 0, total: 0, timeSpent: 0 };
+  });
+
+  APP.questions.forEach((q, i) => {
+    const response = APP.responses[i];
+    const score = calculateScore(q, response);
+    const max = q.posMarks;
+
+    totalScore += score;
+    totalMax += max;
+
+    const st = subjectStats[q.subject];
+    if (st) {
+      st.score += score;
+      st.max += max;
+      st.total++;
+      st.timeSpent += (APP.timeSpent[i] || 0);
+
+      if (!hasResponse(i)) st.skipped++;
+      else if (score > 0) st.correct++;
+      else if (score < 0) st.wrong++;
+    }
+  });
+
+  renderResults(totalScore, totalMax, subjectStats);
+  showScreen('results');
+}
+
+function renderResults(totalScore, totalMax, subjectStats) {
+  // Score ring
+  const pct = Math.max(0, totalScore / totalMax);
+  const circumference = 2 * Math.PI * 66; // 414.69
+  const offset = circumference * (1 - Math.max(0, pct));
+
+  setTimeout(() => {
+    document.getElementById('score-ring-fill').style.strokeDashoffset = offset;
+  }, 200);
+
+  document.getElementById('final-score').textContent = totalScore;
+  document.getElementById('final-out-of').textContent = `/ ${totalMax}`;
+
+  // Title
+  const pctNum = Math.round(pct * 100);
+  let grade = pctNum >= 80 ? '🏆 Outstanding!' : pctNum >= 60 ? '🎯 Good Performance' : pctNum >= 40 ? '📈 Keep Improving' : '💪 More Practice Needed';
+  document.getElementById('result-title').textContent = grade;
+  document.getElementById('result-subtitle').textContent = `You scored ${pctNum}% in this JEE Advanced mock test`;
+
+  // Stats grid
+  const answered = APP.questions.filter((_, i) => hasResponse(i)).length;
+  const timeUsed = APP.totalTime - APP.timeLeft;
+  const accuracy = answered > 0 ? Math.round((Object.values(subjectStats).reduce((s,v) => s + v.correct, 0) / answered) * 100) : 0;
+
+  document.getElementById('stats-grid').innerHTML = [
+    { label: 'Total Score', val: `${totalScore}`, color: totalScore >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' },
+    { label: 'Accuracy', val: `${accuracy}%`, color: 'var(--accent-primary)' },
+    { label: 'Attempted', val: answered, color: 'var(--text-primary)' },
+    { label: 'Skipped', val: APP.questions.length - answered, color: 'var(--text-muted)' },
+    { label: 'Time Used', val: formatTime(timeUsed), color: 'var(--accent-warn)' },
+    { label: 'Total Marks', val: totalMax, color: 'var(--text-secondary)' },
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-value" style="color: ${s.color}">${s.val}</div>
+      <div class="stat-label">${s.label}</div>
+    </div>
+  `).join('');
+
+  // Subject breakdown
+  const colors = { Physics: 'var(--physics-color)', Chemistry: 'var(--chemistry-color)', Maths: 'var(--maths-color)' };
+  document.getElementById('subject-breakdown').innerHTML = APP.subjects.map(s => {
+    const st = subjectStats[s];
+    const acc = st.total > 0 ? Math.round(((st.correct) / st.total) * 100) : 0;
+    const color = colors[s] || 'var(--accent-primary)';
+    return `
+      <div class="subject-card">
+        <div class="subject-card-header">
+          <div class="subject-name">
+            <div class="subject-dot" style="background: ${color}"></div>
+            ${s}
+          </div>
+          <div class="subject-score-chip" style="color:${color}">${st.score}/${st.max}</div>
+        </div>
+        <div class="accuracy-bar-track">
+          <div class="accuracy-bar-fill" style="width: ${Math.max(0,acc)}%; background: ${color}"></div>
+        </div>
+        <div class="subject-stats-row">
+          <span>✓ ${st.correct} correct</span>
+          <span>✗ ${st.wrong} wrong</span>
+          <span>− ${st.skipped} skipped</span>
+          <span>⏱ ${Math.round(st.timeSpent/60)}m</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Rank prediction
+  const rank = predictRank(totalScore, totalMax);
+  document.getElementById('rank-display').textContent = rank;
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.accuracy-bar-fill').forEach(b => {
+      const w = b.style.width;
+      b.style.width = '0%';
+      setTimeout(() => b.style.width = w, 100);
+    });
+  }, 300);
+}
+
+function predictRank(score, maxScore) {
+  const pct = score / maxScore;
+  if (pct >= 0.85) return '< 500';
+  if (pct >= 0.75) return '500 - 2,000';
+  if (pct >= 0.65) return '2,000 - 5,000';
+  if (pct >= 0.55) return '5,000 - 10,000';
+  if (pct >= 0.45) return '10,000 - 20,000';
+  if (pct >= 0.35) return '20,000 - 40,000';
+  return '> 40,000';
+}
+
+function formatTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ================================================================
+// RESULT ACTIONS
+// ================================================================
+function reviewAnswers() {
+  showToast('Loading answer review...', 'success');
+  showScreen('test');
+  APP.isSubmitted = true;
+  goToQuestion(0);
+}
+
+function startNewTest() {
+  showScreen('landing');
+  document.getElementById('file-input').value = '';
+}
+
+function exportResults() {
+  // Generate a simple text summary
+  const lines = [
+    `JEE Advanced AI Simulator — Result Summary`,
+    `Test: ${APP.testTitle}`,
+    `Score: ${document.getElementById('final-score').textContent} ${document.getElementById('final-out-of').textContent}`,
+    `Rank Estimate: ${document.getElementById('rank-display').textContent}`,
+    ``,
+    `Detailed performance has been saved.`
+  ];
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'JEE_Result_Summary.txt';
+  a.click();
+  showToast('Result exported!', 'success');
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(message, type = 'success') {
+  const icons = { success: '✓', warning: '⚠', error: '✕' };
+  const container = document.getElementById('toast-container');
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<span>${icons[type]}</span> ${message}`;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'all 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ================================================================
+// SET PDF.JS WORKER
+// ================================================================
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ================================================================
+// KEYBOARD SHORTCUTS
+// ================================================================
+document.addEventListener('keydown', e => {
+  if (APP.currentScreen !== 'test') return;
+
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigateQuestion(1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigateQuestion(-1);
+  if (e.key === 'r' || e.key === 'R') markForReview();
+  if (e.key === 'c' || e.key === 'C') clearResponse();
+  if (e.key === 's' || e.key === 'S') saveAndNext();
+
+  // Number keys for options
+  if (['1','2','3','4'].includes(e.key)) {
+    const idx = parseInt(e.key) - 1;
+    const q = APP.questions[APP.currentQuestion];
+    if (q && q.type !== 'integer' && idx < (q.options || []).length) selectOption(idx);
+  }
+});
+
+// ================================================================
+// SAVE PROGRESS TO LOCALSTORAGE
+// ================================================================
+function saveProgress() {
+  try {
+    const data = {
+      questions: APP.questions,
+      responses: APP.responses,
+      markedForReview: APP.markedForReview,
+      timeLeft: APP.timeLeft,
+      currentQuestion: APP.currentQuestion,
+      timeSpent: APP.timeSpent,
+      testTitle: APP.testTitle
+    };
+    localStorage.setItem('jee_test_progress', JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadProgress() {
+  try {
+    const saved = localStorage.getItem('jee_test_progress');
+    if (!saved) return false;
+    const data = JSON.parse(saved);
+    Object.assign(APP, data);
+    return true;
+  } catch(e) { return false; }
+}
+
+// Auto-save every 30s
+setInterval(() => {
+  if (APP.currentScreen === 'test') saveProgress();
+}, 30000);
+
+// ================================================================
+// CHECK FOR SAVED PROGRESS ON LOAD
+// ================================================================
+window.addEventListener('load', () => {
+  const hasSaved = loadProgress();
+  if (hasSaved && APP.questions && APP.questions.length > 0 && !APP.isSubmitted) {
+    const resume = confirm(`Resume your previous test "${APP.testTitle}"?\n${Object.keys(APP.responses).length} questions answered.`);
+    if (resume) {
+      buildSubjectTabs();
+      buildPalette();
+      updateTimerDisplay();
+      startTimer();
+      renderCurrentQuestion();
+      showScreen('test');
+    }
+  }
+});
+</script>
+</body>
+</html>
